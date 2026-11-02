@@ -1,19 +1,18 @@
-import { insertCoin, getRoomCode } from "playroomkit";
-import kaplay from "kaplay";
+import kaplay from "https://unpkg.com/kaplay@3001.0.19/dist/kaplay.mjs";
 // import "kaplay/global"; // uncomment if you want to use without the k. prefix
 
 function start() {
     const k = kaplay();
     k.setGravity(1600);
 
-    k.loadRoot("./"); // A good idea for Itch.io publishing later
+    k.loadRoot("./public/"); // A good idea for Itch.io publishing later
     k.loadSprite("bean", "sprites/bean.png");
     k.loadSprite("coin", "sprites/coin.png");
     k.loadSprite("grass", "sprites/grass.png");
     k.loadBitmapFont("happy", "sprites/happy.png", 36, 45);
 
 
-    const roomCode = getRoomCode()
+    const roomCode = Playroom.getRoomCode()
 
     k.add([
         k.text(`${roomCode}\n(1/1)`, { font: 'happy', align: "right" }),
@@ -159,7 +158,7 @@ function start() {
     });
 }
 
-insertCoin({
+Playroom.insertCoin({
     maxPlayersPerRoom: 1,
     maxSpectatorsPerRoom: 0,
 }).then(start);
