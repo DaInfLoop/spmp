@@ -11,6 +11,15 @@ function start() {
     k.loadSprite("grass", "sprites/grass.png");
     k.loadBitmapFont("happy", "sprites/happy.png", 36, 45);
 
+    const state = Playroom.getState();
+
+    if (!state.coinSize) {
+        Playroom.setState("coinSize", 1);
+    }
+
+    if (!state.gameStatus) {
+        Playroom.setState("gameStatus", "playing");
+    }
 
     const roomCode = Playroom.getRoomCode()
 
@@ -22,7 +31,7 @@ function start() {
     ])
 
     const t = k.add([
-        k.text(`1.0/8.0`, { font: 'happy', align: "left" }),
+        k.text(`${Playroom.getState("coinSize").toFixed(1)}/8.0`, { font: 'happy', align: "left" }),
         k.pos(20, 20),
         k.anchor('topleft'),
         k.fixed()
@@ -38,6 +47,13 @@ function start() {
         k.scale()
     ]);
 
+    const savedPosition = Playroom.getState("playerPosition");
+    if (savedPosition) {
+        p.pos = k.vec2(savedPosition.x, savedPosition.y);
+    }
+
+    p.scale = k.vec2(Playroom.getState("coinSize"));
+
     k.add([
         k.sprite('grass', { width: k.width() + 128, tiled: true }),
         k.pos(-64, k.height() - 64),
@@ -45,16 +61,29 @@ function start() {
         k.body({ isStatic: true }),
     ]);
 
+    function syncPlayer() {
+        if (!p.exists()) return;
+
+        Playroom.setState("playerPosition", {
+            x: p.pos.x,
+            y: p.pos.y
+        });
+
+        Playroom.setState("playerAngle", p.angle);
+    }
+
     k.onKeyDown(["left", "a"], () => {
         if (!p.exists()) return
         p.angle = p.angle - 5
         p.pos = p.pos.add(-5, 0)
+        syncPlayer()
     })
 
     k.onKeyDown(["right", "d"], () => {
         if (!p.exists()) return
         p.angle = p.angle + 5
         p.pos = p.pos.add(5, 0)
+        syncPlayer()
     })
 
     k.onKeyPress(["space", "up", "w"], () => {
@@ -69,6 +98,7 @@ function start() {
             0.3,
             (value) => {
                 p.pos.y = value
+                syncPlayer()
             },
             k.easings.easeOutQuad
         ).then(() => {
@@ -78,16 +108,20 @@ function start() {
                 0.3,
                 (value) => {
                     p.pos.y = value
+                    syncPlayer()
                 },
                 k.easings.easeInQuad
             )
         })
     })
 
-    let coinSize = 1;
+    let coinSize = Playroom.getState("coinSize") || 1;
 
     // Randomly spawn coins
     const l = k.loop(2, () => {
+        if (Playroom.getState("gameStatus") !== "playing") {
+            return;
+        }
         const coin = k.add([
             k.sprite("coin"),
             k.pos(
@@ -110,9 +144,14 @@ function start() {
 
     // Collect coins
     p.onCollide("coin", async (coin) => {
+        if (Playroom.getState("gameStatus") !== "playing") {
+            return;
+        }
+
         coin.destroy();
 
         coinSize += 0.2;
+        Playroom.setState("coinSize", coinSize);
         t.text = `${coinSize.toFixed(1)}/8.0`
 
         await k.tween(
@@ -126,6 +165,7 @@ function start() {
         );
 
         if (coinSize > 8) {
+            Playroom.setState("gameStatus", "won");
             k.burp();
             k.addKaboom(p.pos);
             p.destroy();
@@ -152,8 +192,6 @@ function start() {
                 k.fixed(),
                 k.z(101)
             ]);
-
-            console.log("YOU WIN!");
         }
     });
 }
